@@ -30,9 +30,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await db.contactMessage.create({
-      data: { name, contact, subject, message },
-    });
+    try {
+      await db.contactMessage.create({
+        data: { name, contact, subject, message },
+      });
+    } catch (dbErr) {
+      console.warn("db.contactMessage.create failed, saving in mock messages:", dbErr);
+      const { mockMessages } = await import("@/lib/mock-db");
+      mockMessages.push({
+        id: `msg_${Date.now()}`,
+        name,
+        contact,
+        subject,
+        message,
+        createdAt: new Date(),
+      });
+    }
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {

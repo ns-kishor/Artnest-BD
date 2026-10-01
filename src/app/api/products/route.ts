@@ -60,10 +60,50 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("GET /api/products failed:", error);
-    return NextResponse.json(
-      { error: "Unable to load products" },
-      { status: 500 }
-    );
+    console.warn("GET /api/products failed on database, using fallback demo data:", error);
+    try {
+      const { mockCategories, mockProducts } = await import("@/lib/mock-db");
+      return NextResponse.json({
+        categories: mockCategories.map((c: any) => ({
+          id: c.id,
+          slug: c.slug,
+          name: c.name,
+          tagline: c.tagline,
+          image: c.image,
+          sortOrder: c.sortOrder,
+        })),
+        products: mockProducts.map((p: any) => ({
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          shortDescription: p.shortDescription,
+          description: p.description,
+          price: p.price,
+          comparePrice: p.comparePrice,
+          images: parseJsonArray(p.images),
+          colors: parseJsonArray(p.colors),
+          themes: parseJsonArray(p.themes),
+          material: p.material,
+          dimensions: p.dimensions,
+          careInstructions: p.careInstructions,
+          room: p.room,
+          rating: p.rating,
+          reviewCount: p.reviewCount,
+          stock: p.stock,
+          isFeatured: p.isFeatured,
+          isBestSeller: p.isBestSeller,
+          isNewArrival: p.isNewArrival,
+          popularity: p.popularity,
+          categorySlug: p.category?.slug ?? "",
+          categoryName: p.category?.name ?? "",
+          createdAt: p.createdAt,
+        })),
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Unable to load products" },
+        { status: 500 }
+      );
+    }
   }
 }

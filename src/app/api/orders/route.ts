@@ -20,10 +20,22 @@ export async function GET(request: NextRequest) {
   if (!orderNumber) {
     return NextResponse.json({ error: "orderNumber is required" }, { status: 400 });
   }
-  const order = await db.order.findUnique({
-    where: { orderNumber },
-    include: { items: true },
-  });
+
+  let order: any = null;
+  try {
+    order = await db.order.findUnique({
+      where: { orderNumber },
+      include: { items: true },
+    });
+  } catch (err) {
+    console.warn("Database lookup failed in GET /api/orders, checking mock orders:", err);
+  }
+
+  if (!order) {
+    const { mockOrders } = await import("@/lib/mock-db");
+    order = mockOrders.find((o) => o.orderNumber.toUpperCase() === orderNumber.toUpperCase()) || null;
+  }
+
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
@@ -75,9 +87,21 @@ export async function POST(request: NextRequest) {
       }))
       .filter((i) => i.productId.length > 0);
 
-    const dbProducts = await db.product.findMany({
-      where: { id: { in: normalized.map((i) => i.productId) } },
-    });
+    let dbProducts: any[] = [];
+    try {
+      dbProducts = await db.product.findMany({
+        where: { id: { in: normalized.map((i) => i.productId) } },
+      });
+    } catch {
+      // db error fallback
+    }
+
+    if (dbProducts.length === 0) {
+      const { mockProducts } = await import("@/lib/mock-db");
+      dbProducts = mockProducts.filter((p: any) =>
+        normalized.some((i) => i.productId === p.id || i.productId === p.slug)
+      );
+    }
 
     if (dbProducts.length === 0) {
       return NextResponse.json({ error: "None of the cart items could be found." }, { status: 400 });
@@ -85,9 +109,14 @@ export async function POST(request: NextRequest) {
 
     const lines = normalized
       .map((item) => {
-        const product = dbProducts.find((p) => p.id === item.productId);
+        const product = dbProducts.find((p) => p.id === item.productId || p.slug === item.productId);
         if (!product) return null;
-        const images = JSON.parse(product.images || "[]");
+        let images: any[] = [];
+        try {
+          images = typeof product.images === "string" ? JSON.parse(product.images || "[]") : product.images;
+        } catch {
+          images = [];
+        }
         return {
           productId: product.id,
           name: product.name,
@@ -112,9 +141,44 @@ export async function POST(request: NextRequest) {
         : OUTSIDE_DHAKA_FEE;
     const total = subtotal + deliveryCharge;
 
-    const order = await db.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
+    const orderNumber = generateOrderNumber();
+    let order: any = null;
+
+    try {
+      order = await db.order.create({
+        data: {
+          orderNumber,
+          customerName: name,
+          phone,
+          email,
+          address,
+          city,
+          deliveryArea,
+          deliveryNote,
+          subtotal,
+          deliveryCharge,
+          total,
+          status: "confirmed",
+          items: {
+            create: lines.map((l) => ({
+              productId: l.productId,
+              name: l.name,
+              price: l.price,
+              quantity: l.quantity,
+              image: l.image,
+              color: l.color,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+    } catch (dbErr) {
+      console.warn("Failed to write order to database, storing in demo mock orders:", dbErr);
+      const { mockOrders } = await import("@/lib/mock-db");
+      const orderId = `ord_${Date.now()}`;
+      order = {
+        id: orderId,
+        orderNumber,
         customerName: name,
         phone,
         email,
@@ -126,19 +190,20 @@ export async function POST(request: NextRequest) {
         deliveryCharge,
         total,
         status: "confirmed",
-        items: {
-          create: lines.map((l) => ({
-            productId: l.productId,
-            name: l.name,
-            price: l.price,
-            quantity: l.quantity,
-            image: l.image,
-            color: l.color,
-          })),
-        },
-      },
-      include: { items: true },
-    });
+        items: lines.map((l, index) => ({
+          id: `item_${orderId}_${index}`,
+          orderId,
+          productId: l.productId,
+          name: l.name,
+          price: l.price,
+          quantity: l.quantity,
+          image: l.image,
+          color: l.color,
+        })),
+        createdAt: new Date(),
+      };
+      mockOrders.push(order);
+    }
 
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {

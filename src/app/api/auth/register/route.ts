@@ -46,25 +46,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await db.user.findUnique({ where: { email } });
-    if (existing) {
-      return NextResponse.json(
-        { error: "An account with this email already exists. Try signing in instead." },
-        { status: 409 }
-      );
-    }
+    let user: { id: string; name: string; email: string; phone: string | null; createdAt: Date | string };
+    try {
+      const existing = await db.user.findUnique({ where: { email } });
+      if (existing) {
+        return NextResponse.json(
+          { error: "An account with this email already exists. Try signing in instead." },
+          { status: 409 }
+        );
+      }
 
-    const user = await db.user.create({
-      data: {
+      user = await db.user.create({
+        data: {
+          name,
+          email,
+          phone: phone || null,
+          passwordHash: hashPassword(password),
+        },
+      });
+    } catch (dbErr) {
+      console.warn("Database unavailable, falling back to in-memory demo user:", dbErr);
+      const { findMockUserByEmail, createMockUser } = await import("@/lib/mock-db");
+      const existingMock = findMockUserByEmail(email);
+      if (existingMock) {
+        return NextResponse.json(
+          { error: "An account with this email already exists. Try signing in instead." },
+          { status: 409 }
+        );
+      }
+      user = createMockUser({
         name,
         email,
         phone: phone || null,
         passwordHash: hashPassword(password),
-      },
-    });
+      });
+    }
 
-    const res = NextResponse.json({ user: publicUser(user) }, { status: 201 });
-    res.cookies.set(SESSION_COOKIE, createSessionToken(user.id), sessionCookieOptions());
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : String(user.createdAt),
+    };
+
+    const res = NextResponse.json({ user: userData }, { status: 201 });
+    res.cookies.set(SESSION_COOKIE, createSessionToken(userData), sessionCookieOptions());
     return res;
   } catch (error) {
     console.error("POST /api/auth/register failed:", error);

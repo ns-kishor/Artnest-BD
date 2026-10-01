@@ -31,18 +31,32 @@ function sign(payload: string): string {
   return createHmac("sha256", SECRET).update(payload).digest("hex");
 }
 
-export function createSessionToken(userId: string): string {
+export interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  createdAt: string;
+}
+
+export function createSessionToken(userOrId: string | SessionUser): string {
   const expires = Date.now() + SESSION_TTL_MS;
-  const payload = `${userId}.${expires}`;
+  let payloadData: string;
+  if (typeof userOrId === "string") {
+    payloadData = userOrId;
+  } else {
+    payloadData = Buffer.from(JSON.stringify(userOrId)).toString("base64url");
+  }
+  const payload = `${payloadData}.${expires}`;
   return `${payload}.${sign(payload)}`;
 }
 
-export function verifySessionToken(token: string | undefined): string | null {
+export function verifySession(token: string | undefined): { userId: string; user?: SessionUser } | null {
   if (!token) return null;
   const parts = token.split(".");
   if (parts.length !== 3) return null;
-  const [userId, expires, signature] = parts;
-  const payload = `${userId}.${expires}`;
+  const [payloadData, expires, signature] = parts;
+  const payload = `${payloadData}.${expires}`;
   const expected = Buffer.from(sign(payload), "hex");
   const received = Buffer.from(signature, "hex");
   if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
@@ -51,7 +65,22 @@ export function verifySessionToken(token: string | undefined): string | null {
   if (!Number.isFinite(Number(expires)) || Number(expires) < Date.now()) {
     return null;
   }
-  return userId;
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payloadData, "base64url").toString("utf8"));
+    if (parsed && typeof parsed === "object" && parsed.id) {
+      return { userId: parsed.id, user: parsed as SessionUser };
+    }
+  } catch {
+    // Plain userId fallback
+  }
+
+  return { userId: payloadData };
+}
+
+export function verifySessionToken(token: string | undefined): string | null {
+  const session = verifySession(token);
+  return session ? session.userId : null;
 }
 
 export function sessionCookieOptions(maxAgeSeconds = SESSION_TTL_MS / 1000) {
