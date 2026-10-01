@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { uploadProducts } from "./upload-products";
 
 const db = new PrismaClient();
 
@@ -24,7 +25,7 @@ async function main() {
         slug: "wall-decor",
         name: "Wall Décor",
         tagline: "Art & accents for empty walls",
-        image: "/images/cat-wall-decor.png",
+        image: "/images/products/rattan-blossom-wall-set.jpg",
         sortOrder: 1,
       },
       {
@@ -534,6 +535,7 @@ async function main() {
       category: "lifestyle",
       ageDays: 15,
     },
+    ...uploadProducts,
   ];
 
   for (const p of products) {

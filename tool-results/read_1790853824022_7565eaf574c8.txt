@@ -1,0 +1,700 @@
+     1→import { PrismaClient } from "@prisma/client";
+     2→
+     3→const db = new PrismaClient();
+     4→
+     5→const DAY = 24 * 60 * 60 * 1000;
+     6→const now = Date.now();
+     7→
+     8→function daysAgo(n: number) {
+     9→  return new Date(now - n * DAY);
+    10→}
+    11→
+    12→async function main() {
+    13→  console.log("Clearing existing data...");
+    14→  await db.review.deleteMany();
+    15→  await db.orderItem.deleteMany();
+    16→  await db.order.deleteMany();
+    17→  await db.product.deleteMany();
+    18→  await db.category.deleteMany();
+    19→
+    20→  console.log("Seeding categories...");
+    21→  const categories = await Promise.all(
+    22→    [
+    23→      {
+    24→        slug: "wall-decor",
+    25→        name: "Wall Décor",
+    26→        tagline: "Art & accents for empty walls",
+    27→        image: "/images/cat-wall-decor.png",
+    28→        sortOrder: 1,
+    29→      },
+    30→      {
+    31→        slug: "table-decor",
+    32→        name: "Table Décor",
+    33→        tagline: "Objects that style every surface",
+    34→        image: "/images/cat-table-decor.png",
+    35→        sortOrder: 2,
+    36→      },
+    37→      {
+    38→        slug: "vases-plants",
+    39→        name: "Vases & Plants",
+    40→        tagline: "Vases, planters & everlasting greens",
+    41→        image: "/images/cat-vases-plants.png",
+    42→        sortOrder: 3,
+    43→      },
+    44→      {
+    45→        slug: "living-room",
+    46→        name: "Living Room",
+    47→        tagline: "Décor for the heart of your home",
+    48→        image: "/images/cat-living-room.png",
+    49→        sortOrder: 4,
+    50→      },
+    51→      {
+    52→        slug: "bedroom",
+    53→        name: "Bedroom",
+    54→        tagline: "Calm pieces for restful corners",
+    55→        image: "/images/cat-bedroom.png",
+    56→        sortOrder: 5,
+    57→      },
+    58→      {
+    59→        slug: "desk-workspace",
+    60→        name: "Desk & Workspace",
+    61→        tagline: "Beautiful, functional desk accents",
+    62→        image: "/images/cat-desk-workspace.png",
+    63→        sortOrder: 6,
+    64→      },
+    65→      {
+    66→        slug: "lifestyle",
+    67→        name: "Lifestyle",
+    68→        tagline: "Everyday accessories with charm",
+    69→        image: "/images/cat-lifestyle.png",
+    70→        sortOrder: 7,
+    71→      },
+    72→    ].map((c) => db.category.create({ data: c }))
+    73→  );
+    74→
+    75→  const cat = (slug: string) => {
+    76→    const found = categories.find((c) => c.slug === slug);
+    77→    if (!found) throw new Error(`Category ${slug} not found`);
+    78→    return found.id;
+    79→  };
+    80→
+    81→  console.log("Seeding products...");
+    82→
+    83→  type SeedProduct = {
+    84→    slug: string;
+    85→    name: string;
+    86→    shortDescription: string;
+    87→    description: string;
+    88→    price: number;
+    89→    comparePrice?: number;
+    90→    images: string[];
+    91→    colors: string[];
+    92→    themes: string[];
+    93→    material: string;
+    94→    dimensions: string;
+    95→    careInstructions: string;
+    96→    room: string;
+    97→    rating: number;
+    98→    reviewCount: number;
+    99→    stock: number;
+   100→    isFeatured?: boolean;
+   101→    isBestSeller?: boolean;
+   102→    isNewArrival?: boolean;
+   103→    popularity: number;
+   104→    category: string;
+   105→    ageDays: number;
+   106→  };
+   107→
+   108→  const products: SeedProduct[] = [
+   109→    {
+   110→      slug: "framed-line-art-set",
+   111→      name: "Framed Line Art — Set of 3",
+   112→      shortDescription:
+   113→        "A trio of one-line drawings in slim wooden frames to compose a calm gallery wall.",
+   114→      description:
+   115→        "Three finely drawn one-line studies — a face, a botanical stem and an abstract curve — presented in slim natural wood frames. Hang them together as a set above a console or sofa, or spread them across a hallway for a quiet, gallery-like rhythm.",
+   116→      price: 1450,
+   117→      comparePrice: 1800,
+   118→      images: ["/images/products/prod-01.png", "/images/cat-wall-decor.png", "/images/corner-after.png"],
+   119→      colors: ["Natural Wood", "Ivory"],
+   120→      themes: ["minimal", "modern", "artistic"],
+   121→      material: "Engineered wood frames, glass front, art paper prints",
+   122→      dimensions: "Each frame 21 × 30 cm (A4)",
+   123→      careInstructions: "Wipe frames with a dry cloth. Keep away from direct sunlight to prevent fading.",
+   124→      room: "living-room",
+   125→      rating: 4.8,
+   126→      reviewCount: 34,
+   127→      stock: 18,
+   128→      isFeatured: true,
+   129→      isBestSeller: true,
+   130→      popularity: 92,
+   131→      category: "wall-decor",
+   132→      ageDays: 38,
+   133→    },
+   134→    {
+   135→      slug: "macrame-wall-hanging",
+   136→      name: "Macramé Wall Hanging",
+   137→      shortDescription:
+   138→        "Handwoven cotton cords on a wooden dowel — soft texture for bedrooms and entryways.",
+   139→      description:
+   140→        "Hand-knotted from soft cotton cord, this macramé piece brings gentle bohemian texture to any wall. The natural fringe moves subtly with the air, adding warmth above beds, dressers or entry consoles.",
+   141→      price: 950,
+   142→      images: ["/images/products/prod-02.png", "/images/cat-wall-decor.png", "/images/rooms/room-entryway.png"],
+   143→      colors: ["Cream"],
+   144→      themes: ["natural", "cozy", "artistic"],
+   145→      material: "100% cotton cord, natural wooden dowel",
+   146→      dimensions: "45 cm wide × 70 cm long",
+   147→      careInstructions: "Shake gently to remove dust. Comb fringe softly. Spot clean with a damp cloth.",
+   148→      room: "bedroom",
+   149→      rating: 4.7,
+   150→      reviewCount: 21,
+   151→      stock: 22,
+   152→      isNewArrival: true,
+   153→      popularity: 61,
+   154→      category: "wall-decor",
+   155→      ageDays: 6,
+   156→    },
+   157→    {
+   158→      slug: "round-oak-wall-mirror",
+   159→      name: "Round Oak Wall Mirror",
+   160→      shortDescription:
+   161→        "A round mirror framed in warm oak — opens up entryways and doubles the light.",
+   162→      description:
+   163→        "A clean circular mirror in a warm oak-toned frame. Perfect above entryway consoles or vanities, it reflects light and space, making smaller rooms feel open and considered.",
+   164→      price: 2200,
+   165→      comparePrice: 2600,
+   166→      images: ["/images/products/prod-03.png", "/images/rooms/room-entryway.png", "/images/cat-wall-decor.png"],
+   167→      colors: ["Natural Oak"],
+   168→      themes: ["minimal", "elegant", "modern"],
+   169→      material: "Solid oak-finish wood frame, glass mirror",
+   170→      dimensions: "Diameter 50 cm",
+   171→      careInstructions: "Clean glass with a soft damp cloth. Avoid hanging in humid bathrooms.",
+   172→      room: "entryway",
+   173→      rating: 4.9,
+   174→      reviewCount: 27,
+   175→      stock: 12,
+   176→      isFeatured: true,
+   177→      popularity: 88,
+   178→      category: "wall-decor",
+   179→      ageDays: 30,
+   180→    },
+   181→    {
+   182→      slug: "abstract-ceramic-showpiece",
+   183→      name: "Abstract Ceramic Showpiece",
+   184→      shortDescription:
+   185→        "A sculptural matte-glazed form that anchors coffee tables and shelves.",
+   186→      description:
+   187→        "An organic, sculptural form finished in a soft matte glaze. On its own it reads as quiet art; paired with books or a tray it becomes the anchor of a styled tablescape.",
+   188→      price: 850,
+   189→      images: ["/images/products/prod-04.png", "/images/cat-table-decor.png", "/images/corner-after.png"],
+   190→      colors: ["Off-White", "Charcoal"],
+   191→      themes: ["minimal", "modern", "artistic"],
+   192→      material: "Ceramic with matte glaze",
+   193→      dimensions: "H 24 cm × W 12 cm",
+   194→      careInstructions: "Dust with a dry cloth. Not dishwasher safe.",
+   195→      room: "living-room",
+   196→      rating: 4.6,
+   197→      reviewCount: 19,
+   198→      stock: 26,
+   199→      isFeatured: true,
+   200→      popularity: 74,
+   201→      category: "table-decor",
+   202→      ageDays: 26,
+   203→    },
+   204→    {
+   205→      slug: "brass-candle-holder-pair",
+   206→      name: "Brass Candle Holder — Pair",
+   207→      shortDescription:
+   208→        "Antique-finish brass holders for taper candles. Warm light, instantly.",
+   209→      description:
+   210→        "A pair of candlestick holders in a warm antique brass finish. Set the table for dinner or line them along a mantel — within minutes the room settles into a softer, golden mood.",
+   211→      price: 1350,
+   212→      comparePrice: 1550,
+   213→      images: ["/images/products/prod-05.png", "/images/banner-details.png", "/images/cat-table-decor.png"],
+   214→      colors: ["Antique Brass"],
+   215→      themes: ["elegant", "warm", "cozy"],
+   216→      material: "Solid brass with antique finish",
+   217→      dimensions: "H 18 cm and H 14 cm (pair)",
+   218→      careInstructions: "Wipe with a soft dry cloth. Polish occasionally with lemon and salt if desired.",
+   219→      room: "dining",
+   220→      rating: 4.8,
+   221→      reviewCount: 41,
+   222→      stock: 20,
+   223→      isFeatured: true,
+   224→      isBestSeller: true,
+   225→      popularity: 95,
+   226→      category: "table-decor",
+   227→      ageDays: 33,
+   228→    },
+   229→    {
+   230→      slug: "walnut-decorative-tray",
+   231→      name: "Walnut Decorative Tray",
+   232→      shortDescription:
+   233→        "A carved-handle tray in rich walnut to corral candles, remotes and keys.",
+   234→      description:
+   235→        "Turned from rich walnut-finish wood with carved side handles, this tray makes small things look intentional. Use it on the coffee table for candles, on the console for keys, or as a table centerpiece base.",
+   236→      price: 780,
+   237→      comparePrice: 950,
+   238→      images: ["/images/products/prod-06.png", "/images/cat-table-decor.png", "/images/banner-details.png"],
+   239→      colors: ["Walnut"],
+   240→      themes: ["natural", "warm", "minimal"],
+   241→      material: "Wood with walnut finish",
+   242→      dimensions: "Diameter 32 cm",
+   243→      careInstructions: "Wipe clean with a dry cloth. Keep away from water and heat.",
+   244→      room: "living-room",
+   245→      rating: 4.7,
+   246→      reviewCount: 16,
+   247→      stock: 24,
+   248→      isNewArrival: true,
+   249→      popularity: 58,
+   250→      category: "table-decor",
+   251→      ageDays: 9,
+   252→    },
+   253→    {
+   254→      slug: "terracotta-ceramic-vase",
+   255→      name: "Terracotta Ceramic Vase",
+   256→      shortDescription:
+   257→        "Our signature vase — a rounded belly and narrow neck in raw terracotta clay.",
+   258→      description:
+   259→        "The vase that started the studio. Thrown in raw terracotta with a rounded belly and narrow neck, it flatters dried stems, pampas or a single bold branch. Beautiful with or without flowers.",
+   260→      price: 1150,
+   261→      images: ["/images/products/prod-07.png", "/images/cat-vases-plants.png", "/images/corner-after.png"],
+   262→      colors: ["Terracotta", "Ivory"],
+   263→      themes: ["warm", "natural", "minimal"],
+   264→      material: "Unglazed terracotta ceramic",
+   265→      dimensions: "H 26 cm × D 14 cm",
+   266→      careInstructions: "Wipe with a dry cloth. Use a liner or dried stems to avoid water marks.",
+   267→      room: "living-room",
+   268→      rating: 4.9,
+   269→      reviewCount: 58,
+   270→      stock: 30,
+   271→      isFeatured: true,
+   272→      isBestSeller: true,
+   273→      popularity: 98,
+   274→      category: "vases-plants",
+   275→      ageDays: 35,
+   276→    },
+   277→    {
+   278→      slug: "ribbed-glass-vase",
+   279→      name: "Ribbed Glass Vase",
+   280→      shortDescription:
+   281→        "Fluted clear glass that bends light beautifully around fresh stems.",
+   282→      description:
+   283→        "Vertical flutes catch the light and softly distort the stems inside — a small optical trick that makes even supermarket flowers look styled. Lovely on dining tables and vanities.",
+   284→      price: 980,
+   285→      comparePrice: 1200,
+   286→      images: ["/images/products/prod-08.png", "/images/theme-elegant.png", "/images/cat-vases-plants.png"],
+   287→      colors: ["Clear"],
+   288→      themes: ["elegant", "modern", "minimal"],
+   289→      material: "Thick fluted glass",
+   290→      dimensions: "H 22 cm × D 11 cm",
+   291→      careInstructions: "Hand wash with mild soap. Avoid sudden temperature changes.",
+   292→      room: "dining",
+   293→      rating: 4.6,
+   294→      reviewCount: 23,
+   295→      stock: 28,
+   296→      isNewArrival: true,
+   297→      popularity: 66,
+   298→      category: "vases-plants",
+   299→      ageDays: 5,
+   300→    },
+   301→    {
+   302→      slug: "artificial-monstera-pot",
+   303→      name: "Artificial Monstera in Pot",
+   304→      shortDescription:
+   305→        "A lush monstera that stays perfect forever — potted in matte ceramic.",
+   306→      description:
+   307→        "All of the tropical calm, none of the watering. A full, realistically veined monstera sits in a matte beige ceramic pot, ready to soften empty corners from day one.",
+   308→      price: 1650,
+   309→      comparePrice: 1900,
+   310→      images: ["/images/products/prod-09.png", "/images/cat-vases-plants.png", "/images/banner-refresh.png"],
+   311→      colors: ["Green / Beige"],
+   312→      themes: ["natural", "modern", "cozy"],
+   313→      material: "Fabric and plastic foliage, ceramic pot",
+   314→      dimensions: "H 75 cm including pot",
+   315→      careInstructions: "Dust leaves monthly with a dry or slightly damp cloth. Keep out of direct harsh sun.",
+   316→      room: "living-room",
+   317→      rating: 4.8,
+   318→      reviewCount: 47,
+   319→      stock: 15,
+   320→      isFeatured: true,
+   321→      isBestSeller: true,
+   322→      popularity: 90,
+   323→      category: "vases-plants",
+   324→      ageDays: 28,
+   325→    },
+   326→    {
+   327→      slug: "dried-pampas-vase",
+   328→      name: "Dried Pampas in Ceramic Vase",
+   329→      shortDescription:
+   330→        "Fluffy dried pampas plumes arranged in a round ceramic vase — styled and ready.",
+   331→      description:
+   332→        "A ready-made arrangement of soft pampas plumes in warm cream and beige, set in a round ceramic vase. No styling needed — simply place it where the room needs a little softness.",
+   333→      price: 1290,
+   334→      images: ["/images/products/prod-10.png", "/images/theme-minimal.png", "/images/cat-vases-plants.png"],
+   335→      colors: ["Cream", "Beige"],
+   336→      themes: ["natural", "minimal", "warm"],
+   337→      material: "Natural dried pampas grass, ceramic vase",
+   338→      dimensions: "H 55 cm total arrangement",
+   339→      careInstructions: "Do not water. Keep away from moisture. Shake gently outdoors to refresh the plumes.",
+   340→      room: "bedroom",
+   341→      rating: 4.7,
+   342→      reviewCount: 31,
+   343→      stock: 17,
+   344→      isNewArrival: true,
+   345→      popularity: 70,
+   346→      category: "vases-plants",
+   347→      ageDays: 4,
+   348→    },
+   349→    {
+   350→      slug: "textured-cushion-cover-set",
+   351→      name: "Textured Cushion Cover — Set of 2",
+   352→      shortDescription:
+   353→        "Bouclé and linen-finish covers in beige and terracotta. The fastest room refresh.",
+   354→      description:
+   355→        "One beige bouclé, one terracotta linen-finish cover — the pairing that works with almost any sofa. Hidden zippers and quality stitching make them feel far more expensive than they are.",
+   356→      price: 890,
+   357→      comparePrice: 1100,
+   358→      images: ["/images/products/prod-11.png", "/images/cat-living-room.png", "/images/theme-cozy.png"],
+   359→      colors: ["Beige / Terracotta"],
+   360→      themes: ["cozy", "warm", "natural"],
+   361→      material: "Bouclé and cotton-linen blend covers (inserts not included)",
+   362→      dimensions: "45 × 45 cm (2 covers)",
+   363→      careInstructions: "Hand wash or gentle machine cycle in cold water. Do not bleach.",
+   364→      room: "living-room",
+   365→      rating: 4.8,
+   366→      reviewCount: 52,
+   367→      stock: 35,
+   368→      isFeatured: true,
+   369→      isBestSeller: true,
+   370→      popularity: 94,
+   371→      category: "living-room",
+   372→      ageDays: 31,
+   373→    },
+   374→    {
+   375→      slug: "woven-seagrass-basket",
+   376→      name: "Woven Seagrass Basket",
+   377→      shortDescription:
+   378→        "A sturdy seagrass basket for throws, plants or tidy-looking storage.",
+   379→      description:
+   380→        "Hand-woven seagrass with firm handles and a sturdy base. Use it to hold throws beside the sofa, to dress up a nursery plant, or to make open storage finally look deliberate.",
+   381→      price: 1050,
+   382→      images: ["/images/products/prod-12.png", "/images/cat-lifestyle.png", "/images/theme-natural.png"],
+   383→      colors: ["Natural"],
+   384→      themes: ["natural", "cozy", "warm"],
+   385→      material: "Hand-woven seagrass",
+   386→      dimensions: "H 30 cm × D 35 cm",
+   387→      careInstructions: "Wipe with a dry cloth. Air occasionally. Keep away from damp walls.",
+   388→      room: "living-room",
+   389→      rating: 4.7,
+   390→      reviewCount: 24,
+   391→      stock: 19,
+   392→      popularity: 63,
+   393→      category: "lifestyle",
+   394→      ageDays: 22,
+   395→    },
+   396→    {
+   397→      slug: "bedside-table-lamp",
+   398→      name: "Bedside Table Lamp",
+   399→      shortDescription:
+   400→        "A warm-glow lamp with a linen shade and turned wooden base.",
+   401→      description:
+   402→        "A softly glowing bedside lamp with a linen drum shade and turned wooden base. The warm bulb tone makes late-evening scrolling gentler and bedrooms feel like hotels.",
+   403→      price: 2350,
+   404→      comparePrice: 2800,
+   405→      images: ["/images/products/prod-13.png", "/images/cat-bedroom.png", "/images/theme-cozy.png"],
+   406→      colors: ["Natural Wood / Ivory"],
+   407→      themes: ["cozy", "warm", "elegant"],
+   408→      material: "Linen shade, wooden base, standard E27 holder",
+   409→      dimensions: "H 42 cm × Shade D 25 cm",
+   410→      careInstructions: "Dust shade with a soft brush. Use bulbs up to 40W. Wipe base dry.",
+   411→      room: "bedroom",
+   412→      rating: 4.9,
+   413→      reviewCount: 38,
+   414→      stock: 10,
+   415→      isFeatured: true,
+   416→      isBestSeller: true,
+   417→      popularity: 89,
+   418→      category: "bedroom",
+   419→      ageDays: 29,
+   420→    },
+   421→    {
+   422→      slug: "scented-candle-ceramic-jar",
+   423→      name: "Scented Candle — Ceramic Jar",
+   424→      shortDescription:
+   425→        "Slow-burning soy candle in a ribbed jar — sandalwood, amber and vanilla.",
+   426→      description:
+   427→        "Hand-poured soy wax in a ribbed ceramic jar with a wooden lid. Notes of sandalwood, amber and vanilla fill a room gently rather than loudly. When it's done, the jar keeps shelf life as a brush pot.",
+   428→      price: 690,
+   429→      images: ["/images/products/prod-14.png", "/images/cat-lifestyle.png", "/images/theme-cozy.png"],
+   430→      colors: ["Cream"],
+   431→      themes: ["cozy", "warm", "elegant"],
+   432→      material: "Soy wax, cotton wick, ceramic jar",
+   433→      dimensions: "180 g — approx. 35 hours burn time",
+   434→      careInstructions: "Trim wick to 5 mm before each burn. Never leave a burning candle unattended.",
+   435→      room: "bedroom",
+   436→      rating: 4.8,
+   437→      reviewCount: 63,
+   438→      stock: 40,
+   439→      isBestSeller: true,
+   440→      isNewArrival: true,
+   441→      popularity: 96,
+   442→      category: "lifestyle",
+   443→      ageDays: 7,
+   444→    },
+   445→    {
+   446→      slug: "wooden-desk-organizer",
+   447→      name: "Wooden Desk Organizer",
+   448→      shortDescription:
+   449→        "Compartments for pens, notes and devices — a tidy desk in five minutes.",
+   450→      description:
+   451→        "A warm wooden organizer with slots for pens, a bay for your phone and room for notes. It turns desk clutter into a neat little cityscape you won't mind staring at all day.",
+   452→      price: 1150,
+   453→      comparePrice: 1350,
+   454→      images: ["/images/products/prod-15.png", "/images/cat-desk-workspace.png", "/images/theme-minimal.png"],
+   455→      colors: ["Natural Wood"],
+   456→      themes: ["minimal", "natural", "modern"],
+   457→      material: "Solid pine wood",
+   458→      dimensions: "24 × 12 × 10 cm",
+   459→      careInstructions: "Wipe with a dry cloth. Avoid liquid contact.",
+   460→      room: "workspace",
+   461→      rating: 4.6,
+   462→      reviewCount: 14,
+   463→      stock: 21,
+   464→      isNewArrival: true,
+   465→      popularity: 55,
+   466→      category: "desk-workspace",
+   467→      ageDays: 3,
+   468→    },
+   469→    {
+   470→      slug: "ceramic-pen-holder",
+   471→      name: "Ceramic Pen Holder",
+   472→      shortDescription:
+   473→        "A speckled-glaze ceramic cup for pens, brushes or a single stem.",
+   474→      description:
+   475→        "A satisfyingly weighty ceramic cup with a speckled beige glaze. Pens today, brushes tomorrow, a single dried stem on Sunday — it earns its spot on any desk.",
+   476→      price: 450,
+   477→      images: ["/images/products/prod-16.png", "/images/cat-desk-workspace.png", "/images/theme-minimal.png"],
+   478→      colors: ["Speckled Beige"],
+   479→      themes: ["minimal", "natural"],
+   480→      material: "Glazed stoneware",
+   481→      dimensions: "H 10 cm × D 8 cm",
+   482→      careInstructions: "Rinse with water. Not dishwasher safe.",
+   483→      room: "workspace",
+   484→      rating: 4.5,
+   485→      reviewCount: 11,
+   486→      stock: 33,
+   487→      popularity: 48,
+   488→      category: "desk-workspace",
+   489→      ageDays: 18,
+   490→    },
+   491→    {
+   492→      slug: "gallery-photo-frame-set",
+   493→      name: "Gallery Photo Frame Set",
+   494→      shortDescription:
+   495→        "Five wooden frames in mixed sizes to build your own gallery wall.",
+   496→      description:
+   497→        "Five frames in complementary wood tones and mixed sizes, ready to compose into a gallery wall. Lay the arrangement on the floor first, then hang — your wall, your story.",
+   498→      price: 1750,
+   499→      comparePrice: 2100,
+   500→      images: ["/images/products/prod-17.png", "/images/cat-wall-decor.png", "/images/cat-lifestyle.png"],
+   501→      colors: ["Mixed Wood"],
+   502→      themes: ["modern", "minimal", "artistic"],
+   503→      material: "Wood frames, glass fronts, A4 and 15 × 20 cm sizes",
+   504→      dimensions: "Set of 5 — 2 × A4, 2 × 15×20 cm, 1 × 20×20 cm",
+   505→      careInstructions: "Wipe with a dry cloth. Hang on appropriate wall anchors.",
+   506→      room: "living-room",
+   507→      rating: 4.7,
+   508→      reviewCount: 18,
+   509→      stock: 14,
+   510→      isNewArrival: true,
+   511→      popularity: 60,
+   512→      category: "lifestyle",
+   513→      ageDays: 2,
+   514→    },
+   515→    {
+   516→      slug: "ceramic-coaster-set",
+   517→      name: "Ceramic Coaster Set",
+   518→      shortDescription:
+   519→        "Four speckled ceramic coasters with a stand — small detail, big polish.",
+   520→      description:
+   521→        "Four speckled stoneware coasters with a matching stand. They protect the table and quietly make tea time feel like an occasion.",
+   522→      price: 560,
+   523→      images: ["/images/products/prod-18.png", "/images/banner-details.png", "/images/cat-lifestyle.png"],
+   524→      colors: ["Speckled Beige"],
+   525→      themes: ["elegant", "minimal", "warm"],
+   526→      material: "Glazed stoneware with cork base",
+   527→      dimensions: "Each coaster D 10 cm",
+   528→      careInstructions: "Wipe clean. Not dishwasher safe.",
+   529→      room: "dining",
+   530→      rating: 4.6,
+   531→      reviewCount: 13,
+   532→      stock: 29,
+   533→      popularity: 50,
+   534→      category: "lifestyle",
+   535→      ageDays: 15,
+   536→    },
+   537→  ];
+   538→
+   539→  for (const p of products) {
+   540→    await db.product.create({
+   541→      data: {
+   542→        slug: p.slug,
+   543→        name: p.name,
+   544→        shortDescription: p.shortDescription,
+   545→        description: p.description,
+   546→        price: p.price,
+   547→        comparePrice: p.comparePrice ?? null,
+   548→        images: JSON.stringify(p.images),
+   549→        colors: JSON.stringify(p.colors),
+   550→        themes: JSON.stringify(p.themes),
+   551→        material: p.material,
+   552→        dimensions: p.dimensions,
+   553→        careInstructions: p.careInstructions,
+   554→        room: p.room,
+   555→        rating: p.rating,
+   556→        reviewCount: p.reviewCount,
+   557→        stock: p.stock,
+   558→        isFeatured: p.isFeatured ?? false,
+   559→        isBestSeller: p.isBestSeller ?? false,
+   560→        isNewArrival: p.isNewArrival ?? false,
+   561→        popularity: p.popularity,
+   562→        categoryId: cat(p.category),
+   563→        createdAt: daysAgo(p.ageDays),
+   564→      },
+   565→    });
+   566→  }
+   567→
+   568→  const pid = (slug: string) =>
+   569→    db.product.findUnique({ where: { slug } }).then((p) => {
+   570→      if (!p) throw new Error(`Product ${slug} not found`);
+   571→      return p.id;
+   572→    });
+   573→
+   574→  console.log("Seeding reviews...");
+   575→  const reviews = [
+   576→    {
+   577→      productId: null,
+   578→      customerName: "Nusrat Jahan",
+   579→      location: "Dhanmondi, Dhaka",
+   580→      rating: 5,
+   581→      comment:
+   582→        "The terracotta vase looks even better in my living room than in the photos. Really happy with the purchase.",
+   583→      isFeatured: true,
+   584→    },
+   585→    {
+   586→      productId: null,
+   587→      customerName: "Tanvir Ahmed",
+   588→      location: "Chattogram",
+   589→      rating: 5,
+   590→      comment:
+   591→        "Beautifully packed and delivered on time. The brass candle holders made my dining table feel complete.",
+   592→      isFeatured: true,
+   593→    },
+   594→    {
+   595→      productId: null,
+   596→      customerName: "Farhana Rahman",
+   597→      location: "Uttara, Dhaka",
+   598→      rating: 5,
+   599→      comment:
+   600→        "The cushion covers are so soft and the colours are exactly as shown. My sofa finally feels finished.",
+   601→      isFeatured: true,
+   602→    },
+   603→    {
+   604→      productId: null,
+   605→      customerName: "Rafiul Islam",
+   606→      location: "Sylhet",
+   607→      rating: 5,
+   608→      comment:
+   609→        "Ordered twice already. Everything feels curated, not mass-produced. Artnest just gets home décor right.",
+   610→      isFeatured: true,
+   611→    },
+   612→    {
+   613→      productId: null,
+   614→      customerName: "Sadia Karim",
+   615→      location: "Bogura",
+   616→      rating: 4,
+   617→      comment:
+   618→        "The bedside lamp gives the warmest glow. Delivery outside Dhaka took five days, as promised.",
+   619→      isFeatured: true,
+   620→    },
+   621→    {
+   622→      productId: null,
+   623→      customerName: "Arif Hossain",
+   624→      location: "Mirpur, Dhaka",
+   625→      rating: 5,
+   626→      comment:
+   627→        "The monstera looks surprisingly real — guests always ask whether it's natural. Very satisfied.",
+   628→      isFeatured: true,
+   629→    },
+   630→    {
+   631→      productId: await pid("terracotta-ceramic-vase"),
+   632→      customerName: "Mahin Chowdhury",
+   633→      location: "Banani, Dhaka",
+   634→      rating: 5,
+   635→      comment: "Great weight and finish. The narrow neck holds pampas perfectly.",
+   636→      isFeatured: false,
+   637→    },
+   638→    {
+   639→      productId: await pid("textured-cushion-cover-set"),
+   640→      customerName: "Ishrat Sultana",
+   641→      location: "Khulna",
+   642→      rating: 5,
+   643→      comment: "Stitching is neat and the bouclé is genuinely soft. Ordering another set.",
+   644→      isFeatured: false,
+   645→    },
+   646→    {
+   647→      productId: await pid("brass-candle-holder-pair"),
+   648→      customerName: "Rezaul Karim",
+   649→      location: "Gulshan, Dhaka",
+   650→      rating: 5,
+   651→      comment: "Solid brass, not the hollow kind. Dinner lighting has never looked better.",
+   652→      isFeatured: false,
+   653→    },
+   654→    {
+   655→      productId: await pid("artificial-monstera-pot"),
+   656→      customerName: "Nabila Noor",
+   657→      location: "Rajshahi",
+   658→      rating: 4,
+   659→      comment: "Very realistic. Slightly smaller than I imagined but the pot is lovely.",
+   660→      isFeatured: false,
+   661→    },
+   662→    {
+   663→      productId: await pid("bedside-table-lamp"),
+   664→      customerName: "Shafin Rahman",
+   665→      location: "Mohakhali, Dhaka",
+   666→      rating: 5,
+   667→      comment: "Warm glow exactly as described. My bedroom feels like a boutique hotel now.",
+   668→      isFeatured: false,
+   669→    },
+   670→    {
+   671→      productId: await pid("framed-line-art-set"),
+   672→      customerName: "Tasnim Alam",
+   673→      location: "Bashundhara, Dhaka",
+   674→      rating: 5,
+   675→      comment: "Hung the set above our console — instant gallery wall. Frames feel sturdy.",
+   676→      isFeatured: false,
+   677→    },
+   678→  ];
+   679→
+   680→  for (const r of reviews) {
+   681→    await db.review.create({ data: r });
+   682→  }
+   683→
+   684→  const counts = {
+   685→    categories: await db.category.count(),
+   686→    products: await db.product.count(),
+   687→    reviews: await db.review.count(),
+   688→  };
+   689→  console.log("Seed complete:", counts);
+   690→}
+   691→
+   692→main()
+   693→  .catch((e) => {
+   694→    console.error(e);
+   695→    process.exit(1);
+   696→  })
+   697→  .finally(async () => {
+   698→    await db.$disconnect();
+   699→  });
+   700→

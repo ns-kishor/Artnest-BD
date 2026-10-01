@@ -57,3 +57,23 @@ Work Log:
 Stage Summary:
 - Single-route SPA at `/` with 8 state-driven views; 37 AI-generated brand images under /public/images; Prisma SQLite seeded; 4 API routes; lint clean; all golden paths browser-verified end-to-end.
 - Key decisions: client-side catalog from one API fetch for instant filtering; server-authoritative order totals; guest checkout; localStorage-persisted cart/wishlist; theme via next-themes (warm dark palette included).
+
+---
+Task ID: 4
+Agent: orchestrator (main)
+Task: Add login/sign-up page, verify product details page, animated hero product series with owner-uploaded photos (all in Wall Décor category)
+
+Work Log:
+- Copied the 10 owner-uploaded product photos from /upload to /public/images/products/ under descriptive names (rattan-blossom-wall-set.jpg, mini-led-table-lamp.jpg, sunset-blossom-pearl-vase.jpg, nature-canvas-triptych.jpg, hanging-coco-basket.jpg, bloom-rope-wall-mirror.jpg, amber-glow-lamp.jpg, jute-flower-placemat-set.jpg, rattan-ring-planter-pink.jpg, rattan-ring-planter-cascade.jpg).
+- Prisma: added User model (name, unique email, optional BD phone, scrypt passwordHash), db:push.
+- Created prisma/upload-products.ts as single source of truth for the 10 signature products (all category=wall-decor); seed.ts now spreads it; wrote scripts/seed-uploads.ts (idempotent upsert, non-destructive) and ran it — DB now 28 products, 13 in Wall Décor; Wall Décor category card image now uses the real store photo.
+- Auth backend: src/lib/auth.ts (scrypt hash/verify, HMAC-signed stateless session token, cookie options, validators) + API routes POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me (httpOnly cookie "artnest_session", 30-day TTL).
+- Client: src/lib/artnest/auth-store.ts (zustand: user/status/refresh/login/register/logout). ArtnestApp refreshes session on mount.
+- New "account" view in navigator + src/components/artnest/auth-view.tsx: split layout (brand panel with bloom-rope-mirror photo + trust bullets) with Sign In / Create Account tabs, icon inputs, show/hide password, per-field + server error alerts, forgot-password toast, continue-as-guest; logged-in profile panel (avatar, contact, member-since, wishlist/shop CTAs, sign out). Deleted account-dialog.tsx ("coming soon" dialog) and accountOpen state; header now navigates to the account view and shows an avatar DropdownMenu (My Account / Wishlist / Sign Out) when signed in; mobile menu shows dynamic account label + sign out.
+- Hero rewritten: static hero image replaced by an auto-advancing series of the 10 uploaded products (crossfade 1.1s + slow Ken Burns via transitions, 4.2s autoplay, pause on hover/focus/hidden tab, prefers-reduced-motion respected and disables autoplay+zoom). Vertical dot indicators, desktop prev/next arrows, and a floating product chip synced to the active slide (name, price, 1-of-10 counter, click → product page); sr-only live region announces slides.
+- Fixed react-hooks/set-state-in-effect lint error in hero via useSyncExternalStore for reduced-motion detection; restarted dev server (stale Prisma client lacked User model).
+- Removed 2 throwaway test accounts from DB after E2E testing.
+
+Stage Summary:
+- E2E verified with Agent Browser (desktop 1280px + mobile 390px): hero cycles uploaded product photos with chip/dots in sync (slides 1→4→6 observed); chip click opens the full product details page (breadcrumb, −22% badge, rating, stock, ৳899/৳1,150 + Save ৳251, colour, accordions, related); Add to Cart → toast + badge; register → welcome toast + avatar dropdown; profile panel; sign out; sign in again; session restored after reload via cookie; shop Wall Décor filter = 13 pieces incl. all 10 uploaded products; category card uses real store photo; Curated/Just In sections feature new products; footer natural on short + long pages; lint clean; 0 server 500/404s in dev.log.
+- Auth architecture is extensible: stateless HMAC session tokens, scrypt password hashing, no new dependencies; future password reset / social login can plug into /api/auth.

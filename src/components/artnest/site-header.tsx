@@ -1,15 +1,25 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Heart, Menu, Search, ShoppingBag, User } from "lucide-react";
+import { Heart, LogOut, Menu, Search, ShoppingBag, User } from "lucide-react";
 import { useUIStore, type View } from "@/lib/artnest/navigator";
 import { useCartStore, cartCount } from "@/lib/artnest/cart-store";
+import { useAuthStore } from "@/lib/artnest/auth-store";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const emptySubscribe = () => () => {};
@@ -53,9 +63,11 @@ export function SiteHeader() {
   const navigate = useUIStore((s) => s.navigate);
   const setCartOpen = useUIStore((s) => s.setCartOpen);
   const setSearchOpen = useUIStore((s) => s.setSearchOpen);
-  const setAccountOpen = useUIStore((s) => s.setAccountOpen);
   const mobileMenuOpen = useUIStore((s) => s.mobileMenuOpen);
   const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
+  const authUser = useAuthStore((s) => s.user);
+  const authStatus = useAuthStore((s) => s.status);
+  const logout = useAuthStore((s) => s.logout);
 
   const items = useCartStore((s) => s.items);
   const wishlist = useCartStore((s) => s.wishlist);
@@ -134,13 +146,54 @@ export function SiteHeader() {
               </span>
             )}
           </button>
-          <button
-            onClick={() => setAccountOpen(true)}
-            className="hidden h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-accent lg:flex"
-            aria-label="Account"
-          >
-            <User className="h-5 w-5" />
-          </button>
+          {authStatus === "authenticated" && authUser ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-accent lg:flex"
+                  aria-label={`Account — ${authUser.name}`}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-clay text-[11px] font-bold uppercase text-ivory">
+                    {authUser.name.trim().charAt(0).toUpperCase() || "A"}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="truncate text-sm font-semibold text-foreground">{authUser.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{authUser.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate({ name: "account" })} className="cursor-pointer">
+                  <User className="h-4 w-4" aria-hidden="true" />
+                  My Account
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate({ name: "wishlist" })} className="cursor-pointer">
+                  <Heart className="h-4 w-4" aria-hidden="true" />
+                  Wishlist
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={async () => {
+                    await logout();
+                    toast.success("Signed out. See you soon!");
+                  }}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <button
+              onClick={() => navigate({ name: "account" })}
+              className="hidden h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-accent lg:flex"
+              aria-label="Sign in or create an account"
+            >
+              <User className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={() => setCartOpen(true)}
             className="relative flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-accent"
@@ -187,11 +240,23 @@ export function SiteHeader() {
               Wishlist {wishCount > 0 && `(${wishCount})`}
             </button>
             <button
-              onClick={() => setAccountOpen(true)}
+              onClick={() => navigate({ name: "account" })}
               className="rounded-lg px-3 py-3 text-left text-sm font-medium text-foreground transition hover:bg-accent"
             >
-              Account
+              {authUser ? `Account — ${authUser.name.split(" ")[0]}` : "Sign in / Create account"}
             </button>
+            {authUser && (
+              <button
+                onClick={async () => {
+                  await logout();
+                  toast.success("Signed out. See you soon!");
+                  navigate({ name: "home" });
+                }}
+                className="rounded-lg px-3 py-3 text-left text-sm font-medium text-muted-foreground transition hover:bg-accent"
+              >
+                Sign Out
+              </button>
+            )}
             <p className="px-3 pt-4 text-xs leading-relaxed text-muted-foreground">
               Cash on Delivery available nationwide.
               <br />

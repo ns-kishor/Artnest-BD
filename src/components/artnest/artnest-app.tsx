@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 import { initHistorySync, useUIStore } from "@/lib/artnest/navigator";
+import { useAuthStore } from "@/lib/artnest/auth-store";
 import { StoreDataProvider } from "./store-data";
 import { AnnouncementBar } from "./announcement-bar";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { CartDrawer } from "./cart-drawer";
 import { SearchOverlay } from "./search-overlay";
-import { AccountDialog } from "./account-dialog";
 import { HomeView } from "./home-view";
 import { ShopView } from "./shop-view";
 import { ProductView } from "./product-view";
@@ -17,12 +17,19 @@ import { ConfirmationView } from "./confirmation-view";
 import { WishlistView } from "./wishlist-view";
 import { AboutView } from "./about-view";
 import { ContactView } from "./contact-view";
+import { AccountView } from "./auth-view";
 
 export function ArtnestApp() {
   const view = useUIStore((s) => s.view);
+  const refreshAuth = useAuthStore((s) => s.refresh);
 
   // Browser back/forward support
   useEffect(() => initHistorySync(), []);
+
+  // Restore signed-in user from the session cookie
+  useEffect(() => {
+    refreshAuth();
+  }, [refreshAuth]);
 
   // Scroll to top on view change (home with hash handles its own scrolling)
   useEffect(() => {
@@ -49,7 +56,6 @@ export function ArtnestApp() {
         <SiteFooter />
         <CartDrawer />
         <SearchOverlay />
-        <AccountDialog />
       </div>
     </StoreDataProvider>
   );
@@ -71,6 +77,8 @@ function ViewSwitch({ view }: { view: ReturnType<typeof useUIStore.getState>["vi
       return <AboutView />;
     case "contact":
       return <ContactView />;
+    case "account":
+      return <AccountView />;
     case "home":
     default:
       return <HomeView />;

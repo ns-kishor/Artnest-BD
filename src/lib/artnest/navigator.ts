@@ -19,18 +19,17 @@ export type View =
   | { name: "confirmation"; orderNumber: string }
   | { name: "wishlist" }
   | { name: "about" }
-  | { name: "contact" };
+  | { name: "contact" }
+  | { name: "account" };
 
 interface UIState {
   view: View;
   cartOpen: boolean;
   searchOpen: boolean;
-  accountOpen: boolean;
   mobileMenuOpen: boolean;
   navigate: (view: View, viaHistory?: boolean) => void;
   setCartOpen: (open: boolean) => void;
   setSearchOpen: (open: boolean) => void;
-  setAccountOpen: (open: boolean) => void;
   setMobileMenuOpen: (open: boolean) => void;
 }
 
@@ -40,14 +39,12 @@ export const useUIStore = create<UIState>((set, get) => ({
   view: { name: "home" },
   cartOpen: false,
   searchOpen: false,
-  accountOpen: false,
   mobileMenuOpen: false,
   navigate: (view, viaHistory = false) => {
     set({
       view,
       cartOpen: false,
       searchOpen: false,
-      accountOpen: false,
       mobileMenuOpen: false,
     });
     if (!viaHistory && typeof window !== "undefined") {
@@ -60,7 +57,6 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
   setCartOpen: (open) => set({ cartOpen: open }),
   setSearchOpen: (open) => set({ searchOpen: open }),
-  setAccountOpen: (open) => set({ accountOpen: open }),
   setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
 }));
 
